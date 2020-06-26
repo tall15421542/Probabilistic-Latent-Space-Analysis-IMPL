@@ -97,8 +97,7 @@ def main():
     # (first_voc_id, second_voc_id)
     term_id_to_vec_pair_vec = []
     
-    # read inverted file
-    # build document_container
+    # read inverted file / build document_container
     read_inverted_file(inverted_file_path, train_document_container, term_id_to_vec_pair_vec)
                 
     # build inverted_file for train
@@ -109,6 +108,7 @@ def main():
 
     # Model Train EM / evaluate likelihood / early stopping
     model.train()
+
     # output top k P(w|z) over z 
 
     # output top k P(z|d) for over d
