@@ -1,6 +1,18 @@
 import numpy as np
 import math
 
+def get_topk_idx_of_2d_arr(nd_arr, k):
+    idx = np.argpartition(nd_arr, -k)
+    idx = idx[:,-k:]
+    topk_unsorted = np.take_along_axis(nd_arr, idx, axis = -1)
+    topk_idx_of_idx = np.argsort(topk_unsorted, axis = -1)
+    topk_idx = np.take_along_axis(idx, topk_idx_of_idx, axis = -1)
+    return topk_idx
+
+def get_topk_value_given_topk_idx(nd_arr, topk_idx):
+    return np.take_along_axis(nd_arr, topk_idx, axis = -1)
+
+
 class PLSA:
     def __init__(self, document_vec, inverted_file_term_vec, num_of_topic):
         self.document_vec = document_vec
@@ -74,3 +86,30 @@ class PLSA:
             likelihood = self.evaluate_likelihood()
             print(likelihood)
             print("#######################")
+
+    def output_topk_term_given_topic(self, topk, term_id_voc_pair_vec, voc_id_to_voc_vec, model_path):
+        topk_term_given_topic_path = '{}/topk_term_given_topic'.format(model_path)
+        with open(topk_term_given_topic_path, "w") as topk_term_given_topic_file:
+            topk_idx = get_topk_idx_of_2d_arr(self.prob_term_given_topic, topk)
+            topk_idx = np.flip(topk_idx, axis = -1)
+            for topic_id in range(self.num_of_topic):
+                topk_term_given_topic_file.write("topic_id {}\n".format(topic_id))
+                for idx in range(topk):
+                    term_id = topk_idx[topic_id][idx]
+                    first_voc_id, second_voc_id = term_id_voc_pair_vec[term_id]
+                    topk_term_given_topic_file.write('{}{}\n'.format(voc_id_to_voc_vec[first_voc_id], \
+                            voc_id_to_voc_vec[second_voc_id] if second_voc_id != -1 else ''))
+                topk_term_given_topic_file.write('\n')
+
+    def output_topk_doc_given_topic(self, topk, doc_id_to_url_vec, model_path):
+        topk_doc_given_topic_path = '{}/topk_doc_given_topic_path'.format(model_path)
+        with open(topk_doc_given_topic_path, "w") as topk_doc_given_topic_file:
+            topk_idx = get_topk_idx_of_2d_arr(self.prob_topic_given_doc_tran, topk)
+            topk_idx = np.flip(topk_idx, axis = -1)
+            for topic_id in range(self.num_of_topic):
+                topk_doc_given_topic_file.write("topic_id {}\n".format(topic_id))
+                for idx in range(topk):
+                    doc_id = topk_idx[topic_id][idx]
+                    doc_url = doc_id_to_url_vec[doc_id]
+                    topk_doc_given_topic_file.write('{}\n'.format(doc_url))
+                topk_doc_given_topic_file.write('\n')
