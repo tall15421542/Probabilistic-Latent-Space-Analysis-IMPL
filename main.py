@@ -7,6 +7,7 @@ from invertedFile import InvertedFile
 from utils import get_doc_id_to_url_vec
 from utils import get_voc_id_to_voc_vec
 from utils import read_inverted_file
+from query import QueryContainer
 
 def main():
     parser = argparse.ArgumentParser(description = "plsa")
@@ -14,6 +15,7 @@ def main():
     parser.add_argument('-r', action = 'store', dest = 'train_ratio', type=float, default = 0.9)
     parser.add_argument("-t", action = 'store', dest = 'num_of_topic', type = int, default = 16)
     parser.add_argument('-k', action = 'store', dest = 'topk', type = int, default = 10)
+    parser.add_argument('-q', action = 'store', dest = 'query_model_path')
     args = parser.parse_args()
 
     inverted_file_path = '{}/inverted-file'.format(args.model_path)
@@ -45,9 +47,23 @@ def main():
 
     # output top k P(w|z) over z 
     model.output_topk_term_given_topic(args.topk, term_id_to_voc_pair_vec, voc_id_to_voc_vec, args.model_path)
-    model.output_topk_doc_given_topic(args.topk, doc_id_to_url_vec, args.model_path)
 
     # output top k P(z|d) for over d
+    model.output_topk_doc_given_topic(args.topk, doc_id_to_url_vec, args.model_path)
+
+    if(args.query_model_path):
+        print(args.query_model_path)
+        voc_to_voc_id_dict = {}
+        for voc_id, voc in enumerate(voc_id_to_voc_vec):
+            voc_to_voc_id_dict[voc] = voc_id 
+        
+        voc_pair_to_term_id_dict = {}
+        for term_id, voc_pair in enumerate(term_id_to_voc_pair_vec):
+            voc_pair_to_term_id_dict[voc_pair] = term_id
+
+        query_container = QueryContainer(args.num_of_topic, args.query_model_path, \
+                voc_to_voc_id_dict, voc_pair_to_term_id_dict)
+    # read query model
 
 if __name__ == '__main__':
     main()

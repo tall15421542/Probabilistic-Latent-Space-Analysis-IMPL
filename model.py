@@ -75,7 +75,7 @@ class PLSA:
 
     # Model Train EM / evaluate likelihood / early stopping
     def train(self):
-        for i in range(20):
+        for i in range(1):
             print("#######################")
             print("E step", i)
             self.E_step()
