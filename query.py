@@ -1,6 +1,10 @@
 import numpy as np
 
 from utils import get_file_eof
+from document import Document
+from document import DocumentTerm
+from document import DocumentContainer
+from model import PLSA
 
 def get_train_term_id(voc_pair, voc_id_to_train_id_dict, train_voc_pair_to_term_id_dict):
     first_voc_id, second_voc_id = voc_pair
@@ -20,40 +24,44 @@ def get_train_term_id(voc_pair, voc_id_to_train_id_dict, train_voc_pair_to_term_
     else:
         return -1
 
-class QueryTerm:
-    def __init__(self, term_id, tf, tfidf):
-        self.term_id = term_id
-        self.tf = tf
-        self.tfidf = tfidf
-
-class Query:
-    def __init__(self, num_of_topic, query_id, url):
-        self.term_vec = []
-        self.topic_distribution = np.random.dirichlet(np.ones(num_of_topic))
-        self.query_id = query_id
+class Query(Document):
+    def __init__(self, query_id, url):
+        super().__init__(query_id)
         self.url = url
 
-class QueryContainer:
+class QueryContainer(DocumentContainer):
     def __init__(self, num_of_topic, model_path, train_voc_to_id_dict, train_voc_pair_to_term_id_dict):
-        self.query_vec = []
+        super().__init__(0)
+        self.num_of_topic = num_of_topic
+
         # read doc to initilize query
         query_path = '{}/file-list'.format(model_path)
-        with open(query_path) as query_file:
-            urls = query_file.read().splitlines()
-            for query_id, url in enumerate(urls):
-                self.query_vec.append(Query(num_of_topic, query_id, url))
+        self.read_query_file(query_path)
 
         # read vocab, remap vocab id
         vocab_path = '{}/vocab.all'.format(model_path)
+        voc_id_to_train_id_dict = self.read_vocab_file(vocab_path, train_voc_to_id_dict)
+
+        # read inverted file/build query based on train term id
+        inverted_file_path = '{}/inverted-file'.format(model_path)
+        self.read_inverted_file(inverted_file_path, voc_id_to_train_id_dict, train_voc_pair_to_term_id_dict)
+
+    def read_query_file(self, query_path):
+        with open(query_path) as query_file:
+            urls = query_file.read().splitlines()
+            for query_id, url in enumerate(urls):
+                self.doc_vec.append(Query(query_id, url))
+
+    def read_vocab_file(self, vocab_path, train_voc_to_id_dict):
         voc_id_to_train_id_dict = {}
         with open(vocab_path) as vocab_file:
             vocs = vocab_file.read().splitlines()
             for voc_id, voc in enumerate(vocs):
                 if voc in train_voc_to_id_dict:
                     voc_id_to_train_id_dict[voc_id] = train_voc_to_id_dict.get(voc)
+        return voc_id_to_train_id_dict
 
-        # read inverted file/build query based on train term id
-        inverted_file_path = '{}/inverted-file'.format(model_path)
+    def read_inverted_file(self, inverted_file_path, voc_id_to_train_id_dict, train_voc_pair_to_term_id_dict):
         with open(inverted_file_path) as inverted_file:
             eof = get_file_eof(inverted_file)
             while inverted_file.tell() != eof:
@@ -68,6 +76,19 @@ class QueryContainer:
                     query_id = int(query_id)
                     tf = int(tf)
                     tfidf = float(tfidf)
-                    query = self.query_vec[query_id]
-                    query.term_vec.append(QueryTerm(term_id, tf, tfidf))
+                    query = self.doc_vec[query_id]
+                    query.term_vec.append(DocumentTerm(term_id, tf, tfidf))
+    
+class QueryFoldingEngine(PLSA):
+    def __init__(self, query_vec, inverted_file_term_vec, num_of_topic, prob_term_given_topic):
+        super().__init__(query_vec, inverted_file_term_vec, num_of_topic)
+        self.prob_term_given_topic = prob_term_given_topic
 
+    def M_step(self):
+        self.update_prob_topic_given_doc()
+
+    def folding(self):
+        self.train()
+
+    def output_topk_query_given_topic(self, topk, doc_id_to_url_vec, model_path):
+        self.output_topk_doc_given_topic(topk, doc_id_to_url_vec, model_path)

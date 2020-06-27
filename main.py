@@ -8,6 +8,7 @@ from utils import get_doc_id_to_url_vec
 from utils import get_voc_id_to_voc_vec
 from utils import read_inverted_file
 from query import QueryContainer
+from query import QueryFoldingEngine
 
 def main():
     parser = argparse.ArgumentParser(description = "plsa")
@@ -63,6 +64,20 @@ def main():
 
         query_container = QueryContainer(args.num_of_topic, args.query_model_path, \
                 voc_to_voc_id_dict, voc_pair_to_term_id_dict)
+
+        query_folding_engine = QueryFoldingEngine(query_container.doc_vec, train_inverted_file.term_vec, \
+                args.num_of_topic, model.prob_term_given_topic)
+        query_folding_engine.folding()
+        output_query_result_dir = '{}/{}/'.format(args.model_path, args.query_model_path)
+        if not os.path.isdir(output_query_result_dir):
+            try:
+                os.makedirs(output_query_result_dir)
+            except OSError:
+                print ("Creation of the directory %s failed" % output_query_result_dir)
+            else:
+                print ("Successfully created the directory %s" % output_query_result_dir)
+
+        query_folding_engine.output_topk_query_given_topic(args.topk, doc_id_to_url_vec, output_query_result_dir)
     # read query model
 
 if __name__ == '__main__':

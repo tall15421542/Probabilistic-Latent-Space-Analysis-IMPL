@@ -36,8 +36,8 @@ class PLSA:
         normalizer[normalizer == 0] = 1
         self.prob_topic_given_doc_and_term /= normalizer
     
-    def M_step(self):
-        # update P(w|z)
+    def update_prob_term_given_topic(self):
+        print("update P(w|z)")
         for topic_id in range(self.num_of_topic):
             for term_id, inverted_index_vec in enumerate(self.inverted_file_term_vec):
                 prob = 0.
@@ -47,8 +47,9 @@ class PLSA:
         normalizer = self.prob_term_given_topic.sum(axis=1)
         np.testing.assert_array_equal
         self.prob_term_given_topic /= normalizer[:, np.newaxis]
-        
-        # update P(z|d)
+
+    def update_prob_topic_given_doc(self):
+        print("update P(z|d)") 
         for topic_id in range(self.num_of_topic):
             for doc_id, document in enumerate(self.document_vec):
                 prob = 0.
@@ -58,6 +59,13 @@ class PLSA:
                 self.prob_topic_given_doc_tran[topic_id][doc_id] = prob
         normalizer = self.prob_topic_given_doc_tran.sum(axis=0)
         self.prob_topic_given_doc_tran /= normalizer
+
+    def M_step(self):
+        # update P(w|z)
+        self.update_prob_term_given_topic() 
+        
+        # update P(z|d)
+        self.update_prob_topic_given_doc()
                 
     def evaluate_likelihood(self):
         # f(d,w) * log P(w|d)
@@ -75,7 +83,7 @@ class PLSA:
 
     # Model Train EM / evaluate likelihood / early stopping
     def train(self):
-        for i in range(1):
+        for i in range(10):
             print("#######################")
             print("E step", i)
             self.E_step()
