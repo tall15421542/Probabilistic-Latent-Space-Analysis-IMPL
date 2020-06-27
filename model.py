@@ -21,6 +21,7 @@ class PLSA:
                     self.prob_topic_given_doc_and_term[topic_id][doc_id][term_id] = \
                             self.prob_topic_given_doc_tran[topic_id][doc_id] * self.prob_term_given_topic[topic_id][term_id]
         normalizer = self.prob_topic_given_doc_and_term.sum(axis=0)
+        normalizer[normalizer == 0] = 1
         self.prob_topic_given_doc_and_term /= normalizer
     
     def M_step(self):
