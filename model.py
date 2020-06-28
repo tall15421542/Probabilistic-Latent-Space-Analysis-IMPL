@@ -12,6 +12,25 @@ def get_topk_idx_of_2d_arr(nd_arr, k):
 def get_topk_value_given_topk_idx(nd_arr, topk_idx):
     return np.take_along_axis(nd_arr, topk_idx, axis = -1)
 
+class EarlyStopEngine:
+    def __init__(self, max_cnt, var_threshold):
+        self.max_cnt = max_cnt
+        self.history = []
+        self.var_threshold = var_threshold
+
+    def is_stop(self, likelihood):
+        if len(self.history) == 0:
+            self.history.append(likelihood)
+            return False
+
+        last_likelihood = self.history[-1]
+        var = (last_likelihood - likelihood) / last_likelihood
+        if var < self.var_threshold:
+            self.history.append(likelihood)
+        else:
+            self.history.clear()
+        print(self.history)
+        return len(self.history) > self.max_cnt
 
 class PLSA:
     def __init__(self, document_vec, inverted_file_term_vec, num_of_topic):
@@ -25,6 +44,7 @@ class PLSA:
                 shape = (self.num_of_topic, self.num_of_doc, self.num_of_term), dtype = float)
         self.prob_term_given_topic = np.random.dirichlet(np.ones(self.num_of_term), self.num_of_topic)
         self.prob_topic_given_doc_tran = np.random.dirichlet(np.ones(self.num_of_topic), self.num_of_doc).transpose()
+        self.early_stop_engine = EarlyStopEngine(2, 0.001)
 
     def E_step(self):
         for topic_id in range(self.num_of_topic):
@@ -45,7 +65,7 @@ class PLSA:
                     prob += inverted_index.tf * self.prob_topic_given_doc_and_term[topic_id][inverted_index.doc_id][term_id]    
                 self.prob_term_given_topic[topic_id][term_id] = prob
         normalizer = self.prob_term_given_topic.sum(axis=1)
-        np.testing.assert_array_equal
+        normalizer[normalizer == 0] = 1
         self.prob_term_given_topic /= normalizer[:, np.newaxis]
 
     def update_prob_topic_given_doc(self):
@@ -58,6 +78,7 @@ class PLSA:
                     prob += document_term.tf * self.prob_topic_given_doc_and_term[topic_id][doc_id][document_term.term_id]
                 self.prob_topic_given_doc_tran[topic_id][doc_id] = prob
         normalizer = self.prob_topic_given_doc_tran.sum(axis=0)
+        normalizer[normalizer == 0] = 1
         self.prob_topic_given_doc_tran /= normalizer
 
     def M_step(self):
@@ -83,17 +104,20 @@ class PLSA:
 
     # Model Train EM / evaluate likelihood / early stopping
     def train(self):
-        for i in range(10):
+        iter_num = 1
+        while True:
             print("#######################")
-            print("E step", i)
+            print("E step", iter_num)
             self.E_step()
             print("E step Complete")
-            print("M step", i)
+            print("M step", iter_num)
             self.M_step()
             print("M step Complete")
             likelihood = self.evaluate_likelihood()
             print(likelihood)
-            print("#######################")
+            if self.early_stop_engine.is_stop(likelihood):
+                break
+            iter_num += 1
 
     def output_topk_term_given_topic(self, topk, term_id_voc_pair_vec, voc_id_to_voc_vec, model_path):
         topk_term_given_topic_path = '{}/topk_term_given_topic'.format(model_path)
