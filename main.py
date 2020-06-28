@@ -70,9 +70,8 @@ def main():
 
     # output doc and topic mapping
     model.output_doc_and_topic_mapping(doc_id_to_url_vec, args.model_path)
-    
 
-
+    # read query model
     if(args.query_model_path):
         print(args.query_model_path)
 
@@ -83,11 +82,10 @@ def main():
                 args.num_of_topic)
         query_folding_engine.set_prob_term_given_topic(model.prob_term_given_topic)
         query_folding_engine.folding()
-        output_query_result_dir = '{}/{}/'.format(args.model_path, args.query_model_path)
-        
-        make_dir_if_not_exist(output_query_result_dir)
-        query_folding_engine.output_topk_query_given_topic(args.topk, doc_id_to_url_vec, output_query_result_dir)
-    # read query model
+         
+        query_folding_engine.output_topk_query_given_topic(args.topk, doc_id_to_url_vec, args.model_path)
+        query_folding_engine.output_query_status(doc_id_to_url_vec, args.model_path)
+
 
 if __name__ == '__main__':
     main()

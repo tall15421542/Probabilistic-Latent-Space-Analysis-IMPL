@@ -162,6 +162,22 @@ class PLSA:
 
     def output_topk_doc_given_topic(self, topk, doc_id_to_url_vec, model_path):
         topk_doc_given_topic_path = '{}/topk_doc_given_topic_path'.format(model_path)
+        self.output_topk_doc_given_topic_given_path(topk, doc_id_to_url_vec, topk_doc_given_topic_path)
+
+    def output_topk_query_given_topic(self, topk, doc_id_to_url_vec, model_path):
+        topk_query_given_topic_path = '{}/topk_query_given_topic'.format(model_path)
+        self.output_topk_doc_given_topic_given_path(topk, doc_id_to_url_vec, topk_query_given_topic_path)
+  
+    def output_query_status(self, doc_id_to_url_vec, model_path):
+      path = '{}/query_status'.format(model_path)
+      with open(path, "w") as query_status_file:
+        query_status_file.write('{}\n'.format(self.evaluate_likelihood()))
+        prob_topic_given_doc = self.prob_topic_given_doc_tran.transpose()
+        doc_topic_mapping = np.argmax(prob_topic_given_doc, axis = -1)
+        for doc_id, topic_mapping in enumerate(doc_topic_mapping):
+          query_status_file.write('{} {}\n'.format(doc_id_to_url_vec[doc_id], topic_mapping))
+
+    def output_topk_doc_given_topic_given_path(self, topk, doc_id_to_url_vec, topk_doc_given_topic_path):
         with open(topk_doc_given_topic_path, "w") as topk_doc_given_topic_file:
             topk_idx = get_topk_idx_of_2d_arr(self.prob_topic_given_doc_tran, topk)
             topk_idx = np.flip(topk_idx, axis = -1)
@@ -172,9 +188,6 @@ class PLSA:
                     doc_url = doc_id_to_url_vec[doc_id]
                     topk_doc_given_topic_file.write('{}\n'.format(doc_url))
                 topk_doc_given_topic_file.write('\n')
-
-    def output_topk_query_given_topic(self, topk, doc_id_to_url_vec, model_path):
-        self.output_topk_doc_given_topic(topk, doc_id_to_url_vec, model_path)
     
     def output_doc_and_topic_mapping(self, doc_id_to_url_vec, model_path):
       doc_topic_mapping_path = '{}/doc_topic_mapping'.format(model_path)
