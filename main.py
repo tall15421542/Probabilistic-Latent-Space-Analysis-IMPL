@@ -7,16 +7,17 @@ from invertedFile import InvertedFile
 from utils import get_doc_id_to_url_vec
 from utils import get_voc_id_to_voc_vec
 from utils import read_inverted_file
+from utils import make_dir_if_not_exist 
 from query import QueryContainer
-from query import QueryFoldingEngine
 
 def main():
     parser = argparse.ArgumentParser(description = "plsa")
     parser.add_argument('-m', action = 'store', dest = 'model_path', required = True)
     parser.add_argument('-r', action = 'store', dest = 'train_ratio', type=float, default = 0.9)
-    parser.add_argument("-t", action = 'store', dest = 'num_of_topic', type = int, default = 16)
+    parser.add_argument("-t", action = 'store', dest = 'num_of_topic', type = int, default = 10)
     parser.add_argument('-k', action = 'store', dest = 'topk', type = int, default = 10)
     parser.add_argument('-q', action = 'store', dest = 'query_model_path')
+    parser.add_argument('-v', action = 'store', dest = 'validation_model_path')
     args = parser.parse_args()
 
     inverted_file_path = '{}/inverted-file'.format(args.model_path)
@@ -43,8 +44,23 @@ def main():
     # Model initialize
     model = PLSA(train_document_container.doc_vec, train_inverted_file.term_vec, args.num_of_topic)
 
+    voc_to_voc_id_dict = {}
+    for voc_id, voc in enumerate(voc_id_to_voc_vec):
+        voc_to_voc_id_dict[voc] = voc_id 
+    
+    voc_pair_to_term_id_dict = {}
+    for term_id, voc_pair in enumerate(term_id_to_voc_pair_vec):
+        voc_pair_to_term_id_dict[voc_pair] = term_id
+    
+    if(args.validation_model_path):
+        print(args.validation_model_path)
+        validation_container = QueryContainer(args.num_of_topic, args.validation_model_path, \
+                voc_to_voc_id_dict, voc_pair_to_term_id_dict)
+        model.set_validation(validation_container.doc_vec)
+
     # Model Train EM / evaluate likelihood / early stopping
-    model.train()
+    is_folding = False
+    model.train(is_folding)
 
     # output top k P(w|z) over z 
     model.output_topk_term_given_topic(args.topk, term_id_to_voc_pair_vec, voc_id_to_voc_vec, args.model_path)
@@ -52,31 +68,24 @@ def main():
     # output top k P(z|d) for over d
     model.output_topk_doc_given_topic(args.topk, doc_id_to_url_vec, args.model_path)
 
+    # output doc and topic mapping
+    model.output_doc_and_topic_mapping(doc_id_to_url_vec, args.model_path)
+    
+
+
     if(args.query_model_path):
         print(args.query_model_path)
-        voc_to_voc_id_dict = {}
-        for voc_id, voc in enumerate(voc_id_to_voc_vec):
-            voc_to_voc_id_dict[voc] = voc_id 
-        
-        voc_pair_to_term_id_dict = {}
-        for term_id, voc_pair in enumerate(term_id_to_voc_pair_vec):
-            voc_pair_to_term_id_dict[voc_pair] = term_id
 
         query_container = QueryContainer(args.num_of_topic, args.query_model_path, \
                 voc_to_voc_id_dict, voc_pair_to_term_id_dict)
 
-        query_folding_engine = QueryFoldingEngine(query_container.doc_vec, train_inverted_file.term_vec, \
-                args.num_of_topic, model.prob_term_given_topic)
+        query_folding_engine = PLSA(query_container.doc_vec, train_inverted_file.term_vec, \
+                args.num_of_topic)
+        query_folding_engine.set_prob_term_given_topic(model.prob_term_given_topic)
         query_folding_engine.folding()
         output_query_result_dir = '{}/{}/'.format(args.model_path, args.query_model_path)
-        if not os.path.isdir(output_query_result_dir):
-            try:
-                os.makedirs(output_query_result_dir)
-            except OSError:
-                print ("Creation of the directory %s failed" % output_query_result_dir)
-            else:
-                print ("Successfully created the directory %s" % output_query_result_dir)
-
+        
+        make_dir_if_not_exist(output_query_result_dir)
         query_folding_engine.output_topk_query_given_topic(args.topk, doc_id_to_url_vec, output_query_result_dir)
     # read query model
 

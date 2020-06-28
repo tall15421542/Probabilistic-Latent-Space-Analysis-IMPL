@@ -17,13 +17,17 @@ class EarlyStopEngine:
         self.max_cnt = max_cnt
         self.history = []
         self.var_threshold = var_threshold
+        self.over_cnt = 0
 
     def is_stop(self, likelihood):
         if len(self.history) == 0:
             self.history.append(likelihood)
             return False
-
+        
         last_likelihood = self.history[-1]
+        if last_likelihood < likelihood:
+          return True
+
         var = (last_likelihood - likelihood) / last_likelihood
         if var < self.var_threshold:
             self.history.append(likelihood)
@@ -44,7 +48,14 @@ class PLSA:
                 shape = (self.num_of_topic, self.num_of_doc, self.num_of_term), dtype = float)
         self.prob_term_given_topic = np.random.dirichlet(np.ones(self.num_of_term), self.num_of_topic)
         self.prob_topic_given_doc_tran = np.random.dirichlet(np.ones(self.num_of_topic), self.num_of_doc).transpose()
-        self.early_stop_engine = EarlyStopEngine(2, 0.001)
+        self.early_stop_engine = EarlyStopEngine(2, 0.002)
+        self.validation_vec = []
+  
+    def set_prob_term_given_topic(self, prob_term_given_topic):
+      self.prob_term_given_topic = prob_term_given_topic
+
+    def set_validation(self, validation_vec):
+        self.validation_vec = validation_vec
 
     def E_step(self):
         for topic_id in range(self.num_of_topic):
@@ -57,7 +68,6 @@ class PLSA:
         self.prob_topic_given_doc_and_term /= normalizer
     
     def update_prob_term_given_topic(self):
-        print("update P(w|z)")
         for topic_id in range(self.num_of_topic):
             for term_id, inverted_index_vec in enumerate(self.inverted_file_term_vec):
                 prob = 0.
@@ -69,7 +79,6 @@ class PLSA:
         self.prob_term_given_topic /= normalizer[:, np.newaxis]
 
     def update_prob_topic_given_doc(self):
-        print("update P(z|d)") 
         for topic_id in range(self.num_of_topic):
             for doc_id, document in enumerate(self.document_vec):
                 prob = 0.
@@ -81,10 +90,10 @@ class PLSA:
         normalizer[normalizer == 0] = 1
         self.prob_topic_given_doc_tran /= normalizer
 
-    def M_step(self):
+    def M_step(self, is_folding):
         # update P(w|z)
-        self.update_prob_term_given_topic() 
-        
+        if not is_folding:
+          self.update_prob_term_given_topic() 
         # update P(z|d)
         self.update_prob_topic_given_doc()
                 
@@ -102,23 +111,41 @@ class PLSA:
                 likelihood += document_term.tf * math.log(prob)
         return -likelihood
 
+    def evaluate_validation(self):
+      validation_folding_engine = PLSA(self.validation_vec, self.inverted_file_term_vec, \
+              self.num_of_topic)
+      validation_folding_engine.set_prob_term_given_topic(self.prob_term_given_topic)
+      validation_folding_engine.folding()
+      val_likelihood = validation_folding_engine.evaluate_likelihood()
+      del validation_folding_engine
+      return val_likelihood
+
     # Model Train EM / evaluate likelihood / early stopping
-    def train(self):
+    def train(self, is_folding):
         iter_num = 1
         while True:
-            print("#######################")
-            print("E step", iter_num)
-            self.E_step()
-            print("E step Complete")
-            print("M step", iter_num)
-            self.M_step()
-            print("M step Complete")
-            likelihood = self.evaluate_likelihood()
-            print(likelihood)
-            if self.early_stop_engine.is_stop(likelihood):
-                break
-            iter_num += 1
+          if not is_folding:
+            print("EM", iter_num)
+          self.E_step()
+          self.M_step(is_folding)
+          likelihood = float("inf")
 
+          if len(self.validation_vec) > 0:
+            likelihood = self.evaluate_validation()
+            print("validation likelihood", likelihood)
+          else:
+            likelihood = self.evaluate_likelihood()
+            if not is_folding:
+              print("train likelihood", likelihood)
+
+          if self.early_stop_engine.is_stop(likelihood):
+              break
+          iter_num += 1
+
+    def folding(self):
+      is_folding = True
+      self.train(is_folding)
+  
     def output_topk_term_given_topic(self, topk, term_id_voc_pair_vec, voc_id_to_voc_vec, model_path):
         topk_term_given_topic_path = '{}/topk_term_given_topic'.format(model_path)
         with open(topk_term_given_topic_path, "w") as topk_term_given_topic_file:
@@ -145,3 +172,14 @@ class PLSA:
                     doc_url = doc_id_to_url_vec[doc_id]
                     topk_doc_given_topic_file.write('{}\n'.format(doc_url))
                 topk_doc_given_topic_file.write('\n')
+
+    def output_topk_query_given_topic(self, topk, doc_id_to_url_vec, model_path):
+        self.output_topk_doc_given_topic(topk, doc_id_to_url_vec, model_path)
+    
+    def output_doc_and_topic_mapping(self, doc_id_to_url_vec, model_path):
+      doc_topic_mapping_path = '{}/doc_topic_mapping'.format(model_path)
+      with open(doc_topic_mapping_path, "w") as doc_topic_mapping_file:
+        prob_topic_given_doc = self.prob_topic_given_doc_tran.transpose()
+        doc_topic_mapping = np.argmax(prob_topic_given_doc, axis = -1)
+        for doc_id, topic_mapping in enumerate(doc_topic_mapping):
+          doc_topic_mapping_file.write('{} {}\n'.format(doc_id_to_url_vec[doc_id], topic_mapping))

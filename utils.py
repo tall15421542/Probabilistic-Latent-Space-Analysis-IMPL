@@ -37,3 +37,12 @@ def read_inverted_file(inverted_file_path, train_document_container, term_id_to_
                 tfidf = float(tfidf)
                 document = train_document_container.doc_vec[doc_id]
                 document.term_vec.append(DocumentTerm(next_term_id, tf, tfidf))
+
+def make_dir_if_not_exist(dir_path):
+    if not os.path.isdir(dir_path):
+        try:
+            os.makedirs(dir_path)
+        except OSError:
+            print ("Creation of the directory %s failed" % dir_path)
+        else:
+            print ("Successfully created the directory %s" % dir_path)

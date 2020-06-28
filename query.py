@@ -79,16 +79,5 @@ class QueryContainer(DocumentContainer):
                     query = self.doc_vec[query_id]
                     query.term_vec.append(DocumentTerm(term_id, tf, tfidf))
     
-class QueryFoldingEngine(PLSA):
-    def __init__(self, query_vec, inverted_file_term_vec, num_of_topic, prob_term_given_topic):
-        super().__init__(query_vec, inverted_file_term_vec, num_of_topic)
-        self.prob_term_given_topic = prob_term_given_topic
 
-    def M_step(self):
-        self.update_prob_topic_given_doc()
 
-    def folding(self):
-        self.train()
-
-    def output_topk_query_given_topic(self, topk, doc_id_to_url_vec, model_path):
-        self.output_topk_doc_given_topic(topk, doc_id_to_url_vec, model_path)
