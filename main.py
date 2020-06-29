@@ -96,6 +96,8 @@ def main():
         ranking_list_path = '{}/ranking_list_{}'.format(args.model_path, args.num_of_topic)
         output_ranking_list(args.topk, query_id_to_topk_doc_id_vec, doc_id_to_url_vec, ranking_list_path)
         doc_topic_mapping_path = '{}/doc_topic_mapping_query_{}'.format(args.model_path, args.num_of_topic)
+        file_list_path='{}/file-list'.format(args.query_model_path)
+        doc_id_to_url_vec = get_doc_id_to_url_vec(file_list_path)
         query_folding_engine.output_doc_and_topic_mapping(doc_id_to_url_vec, doc_topic_mapping_path)
 
 #        query_folding_engine.output_topk_query_given_topic(args.topk, doc_id_to_url_vec, args.model_path)
@@ -108,6 +110,8 @@ def main():
         test_folding_engine = PLSA(test_container.doc_vec, train_inverted_file.term_vec, \
                 args.num_of_topic)
         doc_topic_mapping_path = '{}/doc_topic_mapping_test_{}'.format(args.model_path, args.num_of_topic)
+        file_list_path='{}/file-list'.format(args.query_test_path)
+        doc_id_to_url_vec = get_doc_id_to_url_vec(file_list_path)
         test_folding_engine.output_doc_and_topic_mapping(doc_id_to_url_vec, doc_topic_mapping_path)
 
 
