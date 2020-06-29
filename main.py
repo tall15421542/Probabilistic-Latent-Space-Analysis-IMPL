@@ -9,6 +9,7 @@ from utils import get_voc_id_to_voc_vec
 from utils import read_inverted_file
 from utils import make_dir_if_not_exist 
 from utils import get_url_set
+from utils import output_ranking_list
 from query import QueryContainer
 from MAP import MAP
 from queryParser import QueryXMLParser
@@ -22,6 +23,8 @@ def main():
     parser.add_argument('-q', action = 'store', dest = 'query_model_path')
     parser.add_argument('-v', action = 'store', dest = 'validation_model_path')
     parser.add_argument('-a', action = 'store', dest = 'ans_path', default = "queries/ans_train.csv")
+    parser.add_argument('--ranking', action = 'store', dest = 'ranking_list_dir')
+    parser.add_argument('--test', action = 'store', dest = 'test_model_path')
     args = parser.parse_args()
 
     inverted_file_path = '{}/inverted-file'.format(args.model_path)
@@ -64,15 +67,8 @@ def main():
         model.set_validation(validation_container.doc_vec)
 
     # Model Train EM / evaluate likelihood / early stopping
-    is_folding = False
-    model.train(is_folding)
-
-    # parse xml
-    query_xml_parser = QueryXMLParser("queries/query-train.xml")
-
-    # map score
-    map_evaluate_engine = MAP(args.ans_path, doc_id_to_url_vec, model.prob_topic_given_doc_tran.transpose(), doc_url_set)
-    map_evaluate_engine.evaluate(model.get_topk_doc_given_topic_idx(args.topk))
+    is_not_folding = False
+    model.train(is_not_folding)
 
     # output top k P(w|z) over z 
     model.output_topk_term_given_topic(args.topk, term_id_to_voc_pair_vec, voc_id_to_voc_vec, args.model_path)
@@ -94,9 +90,21 @@ def main():
                 args.num_of_topic)
         query_folding_engine.set_prob_term_given_topic(model.prob_term_given_topic)
         query_folding_engine.folding()
-         
-        query_folding_engine.output_topk_query_given_topic(args.topk, doc_id_to_url_vec, args.model_path)
-        query_folding_engine.output_query_status(doc_id_to_url_vec, args.model_path)
+
+        query_id_to_topk_doc_id_vec = model.retrieve_topk_doc_id(query_folding_engine.prob_topic_given_doc_tran.transpose())
+        ranking_list_path = '{}/ranking_list_{}'.format(args.model_path, args.num_to_topic)
+        output_ranking_list(args.topk, query_id_to_topk_doc_id_vec, doc_id_to_url_vec, args.ranking_list_dir)
+
+#        query_folding_engine.output_topk_query_given_topic(args.topk, doc_id_to_url_vec, args.model_path)
+#        query_folding_engine.output_query_status(doc_id_to_url_vec, args.model_path)
+
+    if(args.test_model_path):
+        print(args.test_model_path)
+        test_container = QueryContainer(args.num_of_topic, args.test_model_path, \
+                voc_to_voc_id_dict, voc_pair_to_term_id_dict)
+        test_folding_engine = PLSA(test_container.doc_vec, train_inverted_file.term_vec, \
+                args.num_of_topic)
+        test_folding_engine.output_doc_and_topic_mapping(doc_id_to_url_vec, args.model_path)
 
 
 if __name__ == '__main__':

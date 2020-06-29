@@ -55,3 +55,17 @@ def make_dir_if_not_exist(dir_path):
             print ("Creation of the directory %s failed" % dir_path)
         else:
             print ("Successfully created the directory %s" % dir_path)
+
+def output_ranking_list(topk, query_id_to_topk_doc_id_vec, doc_id_to_url_vec, ranking_list_path):
+    with open(ranking_list_path, "w") as ranking_list_file:
+        ranking_list_file.write("query_id,retrieved_docs\n")
+        for query_id, topk_doc_id in enumerate(query_id_to_topk_doc_id_vec):
+            ranking_list_file.write("{},".format(query_id + 1))
+            for i in range(topk):
+                doc_id = topk_doc_id[i]
+                doc_url = doc_id_to_url_vec[doc_id]
+                doc_url = doc_url.split("/")[-1].lower()
+                ranking_list_file.write("{} ".format(doc_url))
+            ranking_list_file.write("\n")
+ 
+            

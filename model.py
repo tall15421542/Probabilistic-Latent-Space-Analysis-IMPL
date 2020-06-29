@@ -51,7 +51,7 @@ class PLSA:
         self.prob_topic_given_doc_tran = np.random.dirichlet(np.ones(self.num_of_topic), self.num_of_doc).transpose()
         self.early_stop_engine = EarlyStopEngine(2, 0.001)
         self.validation_vec = []
-  
+
     def set_prob_term_given_topic(self, prob_term_given_topic):
       self.prob_term_given_topic = prob_term_given_topic
 
@@ -148,7 +148,7 @@ class PLSA:
       self.train(is_folding)
   
     def output_topk_term_given_topic(self, topk, term_id_voc_pair_vec, voc_id_to_voc_vec, model_path):
-        topk_term_given_topic_path = '{}/topk_term_given_topic'.format(model_path)
+        topk_term_given_topic_path = '{}/topk_term_given_topic_{}'.format(model_path, self.num_of_topic)
         with open(topk_term_given_topic_path, "w") as topk_term_given_topic_file:
             topk_idx = get_topk_idx_of_2d_arr(self.prob_term_given_topic, topk)
             for topic_id in range(self.num_of_topic):
@@ -161,15 +161,15 @@ class PLSA:
                 topk_term_given_topic_file.write('\n')
 
     def output_topk_doc_given_topic(self, topk, doc_id_to_url_vec, model_path):
-        topk_doc_given_topic_path = '{}/topk_doc_given_topic_path'.format(model_path)
+        topk_doc_given_topic_path = '{}/topk_doc_given_topic_path_{}'.format(model_path, self.num_of_topic)
         self.output_topk_doc_given_topic_given_path(topk, doc_id_to_url_vec, topk_doc_given_topic_path)
 
     def output_topk_query_given_topic(self, topk, doc_id_to_url_vec, model_path):
-        topk_query_given_topic_path = '{}/topk_query_given_topic'.format(model_path)
+        topk_query_given_topic_path = '{}/topk_query_given_topic_{}'.format(model_path, self.num_of_topic)
         self.output_topk_doc_given_topic_given_path(topk, doc_id_to_url_vec, topk_query_given_topic_path)
   
     def output_query_status(self, doc_id_to_url_vec, model_path):
-      path = '{}/query_status'.format(model_path)
+      path = '{}/query_status_{}'.format(model_path, self.num_of_topic)
       with open(path, "w") as query_status_file:
         query_status_file.write('{}\n'.format(self.evaluate_likelihood()))
         prob_topic_given_doc = self.prob_topic_given_doc_tran.transpose()
@@ -192,9 +192,31 @@ class PLSA:
                 topk_doc_given_topic_file.write('\n')
     
     def output_doc_and_topic_mapping(self, doc_id_to_url_vec, model_path):
-      doc_topic_mapping_path = '{}/doc_topic_mapping'.format(model_path)
+      doc_topic_mapping_path = '{}/doc_topic_mapping_{}'.format(model_path, self.num_of_topic)
       with open(doc_topic_mapping_path, "w") as doc_topic_mapping_file:
         prob_topic_given_doc = self.prob_topic_given_doc_tran.transpose()
-        doc_topic_mapping = np.argmax(prob_topic_given_doc, axis = -1)
-        for doc_id, topic_mapping in enumerate(doc_topic_mapping):
-          doc_topic_mapping_file.write('{} {}\n'.format(doc_id_to_url_vec[doc_id], topic_mapping))
+        topk_idx = get_topk_idx_of_2d_arr(prob_topic_given_doc, 5)
+        for doc_id, topk_topic_id in enumerate(topk_idx):
+          doc_topic_mapping_file.write("{} ".format(doc_id_to_url_vec[doc_id]))
+          for topic_id in topk_topic_id:
+            doc_topic_mapping_file.write("({},{}) ".format(topic_id, prob_topic_given_doc[doc_id][topic_id]) )
+          doc_topic_mapping_file.write("\n")
+
+    def retrieve_topk_doc_id(self, prob_topic_given_query_vec):
+      prob_topic_given_doc = self.prob_topic_given_doc_tran.transpose()
+      print(prob_topic_given_query_vec.shape)
+      print(prob_topic_given_doc.shape)
+      query_id_to_topk_doc_id_vec = []
+      for query_id, prob_topic_given_query in enumerate(prob_topic_given_query_vec):
+        inner_product_vec = np.sum(prob_topic_given_doc * prob_topic_given_query, axis = -1)
+        similiarity = inner_product_vec / (np.linalg.norm(prob_topic_given_doc, axis = -1) * \
+                                           np.linalg.norm(prob_topic_given_query, axis = -1))
+        topk_idx = np.argsort(inner_product_vec)
+        print(topk_idx)
+        topk_idx = topk_idx[::-1]
+        print(topk_idx)
+
+        query_id_to_topk_doc_id_vec.append(topk_idx)
+      return query_id_to_topk_doc_id_vec
+       
+      

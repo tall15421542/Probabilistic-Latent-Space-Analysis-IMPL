@@ -16,7 +16,7 @@ def get_train_term_id(voc_pair, voc_id_to_train_id_dict, train_voc_pair_to_term_
     if second_voc_id in voc_id_to_train_id_dict:
         train_second_voc_id = voc_id_to_train_id_dict.get(second_voc_id)
     elif second_voc_id == -1:
-        train_second_voc_id == -1
+        train_second_voc_id = -1
     else:
         return -1
 

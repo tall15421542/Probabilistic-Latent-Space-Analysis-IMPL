@@ -11,3 +11,4 @@ class QueryXMLParser:
             concepts = concepts.split("、")
             print(concepts)
             self.query_concepts.append(concepts)
+

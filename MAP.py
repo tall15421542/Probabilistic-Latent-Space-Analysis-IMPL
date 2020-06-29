@@ -52,7 +52,7 @@ class MAP:
             query_id = self.topic_id_to_query_id_vec[topic_id]
             map_score_query = 0.
             cnt = 0
-            print("Topic", topic_id)
+            print("Topic", topic_id, "=>", query_id)
             for idx, doc_id in enumerate(doc_id_vec):
                 rank = idx + 1
                 doc_url = self.doc_id_to_url_vec[doc_id]
@@ -63,9 +63,13 @@ class MAP:
                     map_score_query += float(cnt) / float(rank)
             map_score_query /= len(self.ans_train_vec[query_id])
             map_score += map_score_query
-            print(map_score_query)
+            print("map", map_score_query)
+            precision = float(cnt) / float(len(doc_id_vec))
+            print("percision", precision)
         map_score /= len(topk_doc_given_topic)
-        print(map_score)
+        with open("map_score_plsa", "a") as map_file:
+            map_file.write('{}\n'.format(map_score))
+        return map_score
                 
 
 
