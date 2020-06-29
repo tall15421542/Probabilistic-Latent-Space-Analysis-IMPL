@@ -191,8 +191,7 @@ class PLSA:
                     topk_doc_given_topic_file.write('{}\n'.format(doc_url))
                 topk_doc_given_topic_file.write('\n')
     
-    def output_doc_and_topic_mapping(self, doc_id_to_url_vec, model_path):
-      doc_topic_mapping_path = '{}/doc_topic_mapping_{}'.format(model_path, self.num_of_topic)
+    def output_doc_and_topic_mapping(self, doc_id_to_url_vec, doc_topic_mapping_path):
       with open(doc_topic_mapping_path, "w") as doc_topic_mapping_file:
         prob_topic_given_doc = self.prob_topic_given_doc_tran.transpose()
         topk_idx = get_topk_idx_of_2d_arr(prob_topic_given_doc, 5)

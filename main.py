@@ -77,7 +77,8 @@ def main():
     model.output_topk_doc_given_topic(args.topk, doc_id_to_url_vec, args.model_path)
 
     # output doc and topic mapping
-    model.output_doc_and_topic_mapping(doc_id_to_url_vec, args.model_path)
+    doc_topic_mapping_path = '{}/doc_topic_mapping_train_{}'.format(args.model_path, args.num_of_topic)
+    model.output_doc_and_topic_mapping(doc_id_to_url_vec, doc_topic_mapping_path)
 
     # read query model
     if(args.query_model_path):
@@ -94,6 +95,8 @@ def main():
         query_id_to_topk_doc_id_vec = model.retrieve_topk_doc_id(query_folding_engine.prob_topic_given_doc_tran.transpose())
         ranking_list_path = '{}/ranking_list_{}'.format(args.model_path, args.num_of_topic)
         output_ranking_list(args.topk, query_id_to_topk_doc_id_vec, doc_id_to_url_vec, ranking_list_path)
+        doc_topic_mapping_path = '{}/doc_topic_mapping_query_{}'.format(args.model_path, args.num_of_topic)
+        query_folding_engine.output_doc_and_topic_mapping(doc_id_to_url_vec, doc_topic_mapping_path)
 
 #        query_folding_engine.output_topk_query_given_topic(args.topk, doc_id_to_url_vec, args.model_path)
 #        query_folding_engine.output_query_status(doc_id_to_url_vec, args.model_path)
@@ -104,7 +107,8 @@ def main():
                 voc_to_voc_id_dict, voc_pair_to_term_id_dict)
         test_folding_engine = PLSA(test_container.doc_vec, train_inverted_file.term_vec, \
                 args.num_of_topic)
-        test_folding_engine.output_doc_and_topic_mapping(doc_id_to_url_vec, args.model_path)
+        doc_topic_mapping_path = '{}/doc_topic_mapping_test_{}'.format(args.model_path, args.num_of_topic)
+        test_folding_engine.output_doc_and_topic_mapping(doc_id_to_url_vec, doc_topic_mapping_path)
 
 
 if __name__ == '__main__':
