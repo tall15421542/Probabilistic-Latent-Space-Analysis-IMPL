@@ -92,8 +92,8 @@ def main():
         query_folding_engine.folding()
 
         query_id_to_topk_doc_id_vec = model.retrieve_topk_doc_id(query_folding_engine.prob_topic_given_doc_tran.transpose())
-        ranking_list_path = '{}/ranking_list_{}'.format(args.model_path, args.num_to_topic)
-        output_ranking_list(args.topk, query_id_to_topk_doc_id_vec, doc_id_to_url_vec, args.ranking_list_dir)
+        ranking_list_path = '{}/ranking_list_{}'.format(args.model_path, args.num_of_topic)
+        output_ranking_list(args.topk, query_id_to_topk_doc_id_vec, doc_id_to_url_vec, ranking_list_path)
 
 #        query_folding_engine.output_topk_query_given_topic(args.topk, doc_id_to_url_vec, args.model_path)
 #        query_folding_engine.output_query_status(doc_id_to_url_vec, args.model_path)
