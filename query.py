@@ -1,4 +1,5 @@
 import numpy as np
+import xml.etree.ElementTree as ET
 
 from utils import get_file_eof
 from document import Document

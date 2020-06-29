@@ -7,6 +7,15 @@ def get_file_eof(file_obj):
     file_obj.seek(0, 0)
     return eof
 
+def get_url_set(file_list_path):
+    url_set = set()
+    with open(file_list_path) as file_list:
+        lines = file_list.read().splitlines()
+        for url in lines:
+            url = url.split("/")[-1].lower()
+            url_set.add(url)
+    return url_set
+
 def get_doc_id_to_url_vec(file_list_path):
     doc_id_to_url_vec = []
     with open(file_list_path) as file_list:

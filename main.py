@@ -8,16 +8,20 @@ from utils import get_doc_id_to_url_vec
 from utils import get_voc_id_to_voc_vec
 from utils import read_inverted_file
 from utils import make_dir_if_not_exist 
+from utils import get_url_set
 from query import QueryContainer
+from MAP import MAP
+from queryParser import QueryXMLParser
 
 def main():
     parser = argparse.ArgumentParser(description = "plsa")
     parser.add_argument('-m', action = 'store', dest = 'model_path', required = True)
     parser.add_argument('-r', action = 'store', dest = 'train_ratio', type=float, default = 0.9)
     parser.add_argument("-t", action = 'store', dest = 'num_of_topic', type = int, default = 10)
-    parser.add_argument('-k', action = 'store', dest = 'topk', type = int, default = 10)
+    parser.add_argument('-k', action = 'store', dest = 'topk', type = int, default = 20)
     parser.add_argument('-q', action = 'store', dest = 'query_model_path')
     parser.add_argument('-v', action = 'store', dest = 'validation_model_path')
+    parser.add_argument('-a', action = 'store', dest = 'ans_path', default = "queries/ans_train.csv")
     args = parser.parse_args()
 
     inverted_file_path = '{}/inverted-file'.format(args.model_path)
@@ -28,6 +32,7 @@ def main():
     print(file_list_path)
 
     doc_id_to_url_vec = get_doc_id_to_url_vec(file_list_path)
+    doc_url_set = get_url_set(file_list_path)
     voc_id_to_voc_vec = get_voc_id_to_voc_vec(voc_list_path)
 
     train_document_container = DocumentContainer(len(doc_id_to_url_vec))
@@ -61,6 +66,13 @@ def main():
     # Model Train EM / evaluate likelihood / early stopping
     is_folding = False
     model.train(is_folding)
+
+    # parse xml
+    query_xml_parser = QueryXMLParser("queries/query-train.xml")
+
+    # map score
+    map_evaluate_engine = MAP(args.ans_path, doc_id_to_url_vec, model.prob_topic_given_doc_tran.transpose(), doc_url_set)
+    map_evaluate_engine.evaluate(model.get_topk_doc_given_topic_idx(args.topk))
 
     # output top k P(w|z) over z 
     model.output_topk_term_given_topic(args.topk, term_id_to_voc_pair_vec, voc_id_to_voc_vec, args.model_path)

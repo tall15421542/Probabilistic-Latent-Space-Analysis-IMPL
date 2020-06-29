@@ -7,6 +7,7 @@ def get_topk_idx_of_2d_arr(nd_arr, k):
     topk_unsorted = np.take_along_axis(nd_arr, idx, axis = -1)
     topk_idx_of_idx = np.argsort(topk_unsorted, axis = -1)
     topk_idx = np.take_along_axis(idx, topk_idx_of_idx, axis = -1)
+    topk_idx = np.flip(topk_idx, axis = -1)
     return topk_idx
 
 def get_topk_value_given_topk_idx(nd_arr, topk_idx):
@@ -48,7 +49,7 @@ class PLSA:
                 shape = (self.num_of_topic, self.num_of_doc, self.num_of_term), dtype = float)
         self.prob_term_given_topic = np.random.dirichlet(np.ones(self.num_of_term), self.num_of_topic)
         self.prob_topic_given_doc_tran = np.random.dirichlet(np.ones(self.num_of_topic), self.num_of_doc).transpose()
-        self.early_stop_engine = EarlyStopEngine(2, 0.002)
+        self.early_stop_engine = EarlyStopEngine(2, 0.001)
         self.validation_vec = []
   
     def set_prob_term_given_topic(self, prob_term_given_topic):
@@ -150,7 +151,6 @@ class PLSA:
         topk_term_given_topic_path = '{}/topk_term_given_topic'.format(model_path)
         with open(topk_term_given_topic_path, "w") as topk_term_given_topic_file:
             topk_idx = get_topk_idx_of_2d_arr(self.prob_term_given_topic, topk)
-            topk_idx = np.flip(topk_idx, axis = -1)
             for topic_id in range(self.num_of_topic):
                 topk_term_given_topic_file.write("topic_id {}\n".format(topic_id))
                 for idx in range(topk):
@@ -177,10 +177,12 @@ class PLSA:
         for doc_id, topic_mapping in enumerate(doc_topic_mapping):
           query_status_file.write('{} {}\n'.format(doc_id_to_url_vec[doc_id], topic_mapping))
 
+    def get_topk_doc_given_topic_idx(self, topk):
+      return get_topk_idx_of_2d_arr(self.prob_topic_given_doc_tran, topk)
+
     def output_topk_doc_given_topic_given_path(self, topk, doc_id_to_url_vec, topk_doc_given_topic_path):
         with open(topk_doc_given_topic_path, "w") as topk_doc_given_topic_file:
             topk_idx = get_topk_idx_of_2d_arr(self.prob_topic_given_doc_tran, topk)
-            topk_idx = np.flip(topk_idx, axis = -1)
             for topic_id in range(self.num_of_topic):
                 topk_doc_given_topic_file.write("topic_id {}\n".format(topic_id))
                 for idx in range(topk):
