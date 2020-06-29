@@ -110,7 +110,7 @@ def main():
         test_folding_engine = PLSA(test_container.doc_vec, train_inverted_file.term_vec, \
                 args.num_of_topic)
         doc_topic_mapping_path = '{}/doc_topic_mapping_test_{}'.format(args.model_path, args.num_of_topic)
-        file_list_path='{}/file-list'.format(args.query_test_path)
+        file_list_path='{}/file-list'.format(args.test_model_path)
         doc_id_to_url_vec = get_doc_id_to_url_vec(file_list_path)
         test_folding_engine.output_doc_and_topic_mapping(doc_id_to_url_vec, doc_topic_mapping_path)
 
