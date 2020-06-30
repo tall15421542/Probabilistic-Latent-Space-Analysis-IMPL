@@ -49,7 +49,17 @@ class PLSA:
                 shape = (self.num_of_topic, self.num_of_doc, self.num_of_term), dtype = float)
         self.prob_term_given_topic = np.random.dirichlet(np.ones(self.num_of_term), self.num_of_topic)
         self.prob_topic_given_doc_tran = np.random.dirichlet(np.ones(self.num_of_topic), self.num_of_doc).transpose()
-        self.early_stop_engine = EarlyStopEngine(2, 0.001)
+        #self.prob_term_given_topic = np.random.random(size = (self.num_of_topic, self.num_of_term))
+        #normalizer = self.prob_term_given_topic.sum(axis=1)
+        #normalizer[normalizer == 0] = 1
+        #self.prob_term_given_topic /= normalizer[:, np.newaxis]
+        #
+        #self.prob_topic_given_doc_tran = np.random.random(size = (self.num_of_topic, self.num_of_doc))
+        #normalizer = self.prob_topic_given_doc_tran.sum(axis=0)
+        #normalizer[normalizer == 0] = 1
+        #self.prob_topic_given_doc_tran /= normalizer
+        
+        self.early_stop_engine = EarlyStopEngine(2, 0.00001)
         self.validation_vec = []
 
     def set_prob_term_given_topic(self, prob_term_given_topic):
@@ -131,10 +141,10 @@ class PLSA:
           self.M_step(is_folding)
           likelihood = float("inf")
 
-          if len(self.validation_vec) > 0:
+          if len(self.validation_vec) > 0 and iter_num % 4 == 0:
             likelihood = self.evaluate_validation()
             print("validation likelihood", likelihood)
-          else:
+          elif self.validation_vec == 0:
             likelihood = self.evaluate_likelihood()
             if not is_folding:
               print("train likelihood", likelihood)
@@ -149,6 +159,7 @@ class PLSA:
   
     def output_topk_term_given_topic(self, topk, term_id_voc_pair_vec, voc_id_to_voc_vec, model_path):
         topk_term_given_topic_path = '{}/topk_term_given_topic_{}'.format(model_path, self.num_of_topic)
+        var_given_topic  = np.var(self.prob_term_given_topic, axis = -1)
         with open(topk_term_given_topic_path, "w") as topk_term_given_topic_file:
             topk_idx = get_topk_idx_of_2d_arr(self.prob_term_given_topic, topk)
             for topic_id in range(self.num_of_topic):
@@ -156,9 +167,11 @@ class PLSA:
                 for idx in range(topk):
                     term_id = topk_idx[topic_id][idx]
                     first_voc_id, second_voc_id = term_id_voc_pair_vec[term_id]
-                    topk_term_given_topic_file.write('{}{}\n'.format(voc_id_to_voc_vec[first_voc_id], \
-                            voc_id_to_voc_vec[second_voc_id] if second_voc_id != -1 else ''))
+                    topk_term_given_topic_file.write('{}{} {}\n'.format(voc_id_to_voc_vec[first_voc_id], \
+                            voc_id_to_voc_vec[second_voc_id] if second_voc_id != -1 else '', self.prob_term_given_topic[topic_id][term_id]))
                 topk_term_given_topic_file.write('\n')
+                topk_term_given_topic_file.write('{}\n'.format(var_given_topic[topic_id]))
+            topk_term_given_topic_file.write('{}\n'.format(var_given_topic.mean()))
 
     def output_topk_doc_given_topic(self, topk, doc_id_to_url_vec, model_path):
         topk_doc_given_topic_path = '{}/topk_doc_given_topic_path_{}'.format(model_path, self.num_of_topic)
@@ -192,14 +205,17 @@ class PLSA:
                 topk_doc_given_topic_file.write('\n')
     
     def output_doc_and_topic_mapping(self, doc_id_to_url_vec, doc_topic_mapping_path):
+      prob_topic_given_doc = self.prob_topic_given_doc_tran.transpose()
+      var_given_doc  = np.var(prob_topic_given_doc, axis = -1)
       with open(doc_topic_mapping_path, "w") as doc_topic_mapping_file:
-        prob_topic_given_doc = self.prob_topic_given_doc_tran.transpose()
         topk_idx = get_topk_idx_of_2d_arr(prob_topic_given_doc, 5)
         for doc_id, topk_topic_id in enumerate(topk_idx):
           doc_topic_mapping_file.write("{} ".format(doc_id_to_url_vec[doc_id]))
           for topic_id in topk_topic_id:
             doc_topic_mapping_file.write("({},{}) ".format(topic_id, prob_topic_given_doc[doc_id][topic_id]) )
           doc_topic_mapping_file.write("\n")
+          doc_topic_mapping_file.write("{}\n".format(var_given_doc[doc_id]))
+        doc_topic_mapping_file.write('{}\n'.format(var_given_doc.mean()))
 
     def retrieve_topk_doc_id(self, prob_topic_given_query_vec):
       prob_topic_given_doc = self.prob_topic_given_doc_tran.transpose()
