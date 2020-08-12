@@ -1,4 +1,23 @@
 # Probalilistic Latent Space Model implementation
+## Usage
+```
+usage: main.py [-h] -m MODEL_PATH [-r TRAIN_RATIO] [-t NUM_OF_TOPIC] [-k TOPK] [-q QUERY_MODEL_PATH] [-v VALIDATION_MODEL_PATH]
+               [-a ANS_PATH] [--ranking RANKING_LIST_DIR] [--test TEST_MODEL_PATH]
+
+plsa
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -m MODEL_PATH
+  -r TRAIN_RATIO
+  -t NUM_OF_TOPIC
+  -k TOPK
+  -q QUERY_MODEL_PATH
+  -v VALIDATION_MODEL_PATH
+  -a ANS_PATH
+  --ranking RANKING_LIST_DIR
+  --test TEST_MODEL_PATH
+```
 ## Paper Reference
 [Probabilistic Latent Semantic Analysis](https://arxiv.org/pdf/1301.6705.pdf)
 ## Model Research
